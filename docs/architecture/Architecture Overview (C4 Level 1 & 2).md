@@ -1,192 +1,158 @@
-# Architecture Overview – C4 Model (Level 1 & Level 2)
+# System Architecture Overview
 
-## 1. Overview
-
-This document describes the high-level architecture of the **Personal Finance & Loan Management System** using the **C4 Model**, focusing on:
-
-* **Level 1: System Context**
-* **Level 2: Container Diagram**
-
-The goal is to clearly communicate system boundaries, responsibilities, and major technical decisions without diving into implementation details.
+This document provides a **System Diagram** using the **C4 Model – Level 1 (System Context)** and **Level 2 (Container Diagram)** for the Personal Finance & Loan Management System.
 
 ---
 
-## 2. C4 – Level 1: System Context Diagram
+## C4 – Level 1: System Context Diagram
 
-### 2.1 Primary Actor
+### Overview
 
-**End User**
+The system is a **Personal Finance & Loan Management System** that allows individual users to:
 
-* An individual managing personal finances
-* Uses the system to track accounts, expenses, transactions, and bank loans
+* Manage personal accounts
+* Track expenses and income
+* Manage bank loans and repayments
+* View balances and financial history
 
----
+### External Actors & Systems
 
-### 2.2 External Systems
+* **User**
 
-**Google Identity Platform**
+  * Uses the web application to manage personal finances
 
-* Provides authentication via OpenID Connect (OIDC)
-* Used for user login only
+* **Google Identity Platform**
 
----
+  * Acts as the external Identity Provider (OIDC)
+  * Handles authentication and identity verification
 
-### 2.3 System Under Design
+### System Context (Textual Diagram)
 
-**Personal Finance & Loan Management System**
+```
+[ User ]
+    |
+    |  Login / Manage Finance
+    v
+[ Personal Finance & Loan Management System ]
+    |
+    |  OIDC Authentication
+    v
+[ Google OIDC ]
+```
 
-* A web-based system that allows users to:
+### Notes
 
-  * Manage financial accounts
-  * Record financial transactions
-  * Track personal expenses
-  * Manage bank loans with declining balance interest
-
----
-
-### 2.4 Context Relationships
-
-* The **End User** interacts with the system through a web browser
-* The system delegates authentication to **Google Identity Platform**
-* After authentication, all business operations are handled internally by the system
-
----
-
-### 2.5 Key Context-Level Decisions
-
-* The system is **single-tenant per user** (data isolation by user ID)
-* Authentication is outsourced to a trusted external identity provider
-* Financial data consistency is handled entirely within system boundaries
+* The system does not manage passwords
+* All sensitive financial operations occur inside the system boundary
+* Authentication is delegated, authorization is internal
 
 ---
 
-## 3. C4 – Level 2: Container Diagram
+## C4 – Level 2: Container Diagram
 
-### 3.1 Containers Overview
+### Containers
 
-The system is implemented as a **modular monolith** consisting of multiple logical containers.
+#### 1. Web Frontend (SPA)
 
----
+* Technology: React / Next.js (suggested)
+* Responsibilities:
 
-### 3.2 Containers Description
+  * User interaction
+  * Initiate Google login
+  * Send authenticated API requests
 
-#### 3.2.1 Web Frontend
+#### 2. Backend Application (Modular Monolith)
 
-* **Type**: Single Page Application (SPA)
-* **Technology**: React + TypeScript
-* **Responsibilities**:
+* Technology: Java (Spring Boot) or similar
+* Responsibilities:
 
-  * User interaction and UI rendering
-  * Authentication redirection to Google
-  * Displaying dashboards, reports, and forms
-  * Calling backend APIs
+  * Business logic
+  * Authorization
+  * Financial consistency
+  * JWT issuance and validation
 
----
+Subdomains inside backend:
 
-#### 3.2.2 Backend Application
+* Identity (Auth Adapter)
+* Account Management
+* Transaction Ledger
+* Loan Management
+* Expense Management
 
-* **Type**: Modular Monolith
-* **Technology**: Java 17, Spring Boot 3
-* **Responsibilities**:
+#### 3. Database
 
-  * Enforcing business rules
-  * Managing financial transactions
-  * Coordinating loan repayments and account balance updates
-  * Issuing internal JWTs after authentication
+* Technology: PostgreSQL
+* Single physical database
+* Schema separation per domain
 
-##### Internal Modules (Logical Containers)
+#### 4. External Identity Provider
 
-* **Auth Module**
+* Google OIDC
 
-  * OIDC integration with Google
-  * Internal JWT issuance and validation
+### Container Interaction Diagram (Textual)
 
-* **Account Module**
-
-  * Account lifecycle management
-  * Balance updates
-
-* **Transaction Module**
-
-  * Recording income, expense, and transfer transactions
-  * Acts as the single source of truth for cash flow
-
-* **Expense Module**
-
-  * Expense categorization
-  * Expense analytics support
-
-* **Loan Module**
-
-  * Loan creation and management
-  * Declining balance interest calculation
-  * Loan repayment processing
-
-* **Reporting Module**
-
-  * Aggregated financial views
-  * Read-only reporting queries
-
----
-
-#### 3.2.3 Database
-
-* **Type**: Relational Database
-* **Technology**: PostgreSQL
-* **Responsibilities**:
-
-  * Persistent storage of all financial data
-  * Enforcing transactional consistency (ACID)
+```
+[ User ]
+    |
+    | HTTPS
+    v
+[ Web Frontend (SPA) ]
+    |
+    | Google Login Redirect
+    v
+[ Google OIDC ]
+    |
+    | ID Token
+    v
+[ Web Frontend ]
+    |
+    | API Request + Google ID Token
+    v
+[ Backend Application ]
+    |
+    | Validate ID Token
+    | Issue Internal JWT
+    |
+    | Business Operations
+    v
+[ PostgreSQL Database ]
+```
 
 ---
 
-### 3.3 Container Interactions
+## Architectural Characteristics
 
-* The **Web Frontend** communicates with the **Backend Application** via RESTful APIs
-* The **Backend Application** communicates with **PostgreSQL** using transactional queries
-* Authentication flow:
-
-  * Frontend redirects user to Google
-  * Google returns ID token
-  * Backend validates token and issues internal JWT
+* **Monolithic deployment, modular design**
+* **Strong consistency for financial operations**
+* **Ledger-style transaction model**
+* **Stateless authentication using JWT**
 
 ---
 
-### 3.4 Key Container-Level Decisions
+## Intentional Omissions
 
-* **Modular Monolith over Microservices**
+The following are intentionally excluded at this stage:
 
-  * Strong transactional consistency for financial operations
-  * Lower operational complexity
-  * Clear migration path to microservices if needed
+* Message broker
+* Event streaming
+* Distributed tracing
+* Microservices
 
-* **Database as Single Source of Truth**
-
-  * All balances derived from persisted transactions
-  * No eventual consistency for core financial data
-
-* **Backend-Centric Business Logic**
-
-  * Frontend contains no financial rules
-  * Ensures correctness and security
+These may be introduced when system scale or organizational needs justify them.
 
 ---
 
-## 4. Architectural Characteristics
+## Summary
 
-* **Consistency**: Strong transactional guarantees
-* **Maintainability**: Clear module boundaries
-* **Scalability**: Vertical scaling initially, horizontal scaling possible later
-* **Security**: OAuth2/OIDC, JWT-based authorization
+This architecture prioritizes:
 
----
+* Financial correctness
+* Simplicity
+* Clear domain boundaries
+* Evolutionary design
 
-## 5. Next Steps
-
-* C4 Level 3: Component diagrams for Account, Transaction, and Loan modules
-* Sequence diagrams for critical use cases (Expense, Loan Repayment)
-* Architecture Decision Records (ADR)
+The system is designed to grow without prematurely paying the cost of distributed complexity.
 
 ---
 
-**End of Document**
+**End of System Diagram Document**
