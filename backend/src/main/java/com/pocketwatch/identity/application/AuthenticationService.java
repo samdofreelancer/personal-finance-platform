@@ -1,10 +1,10 @@
 package com.pocketwatch.identity.application;
 
+import io.jsonwebtoken.Claims;
 import com.pocketwatch.identity.domain.User;
 import com.pocketwatch.identity.domain.UserRepository;
 import com.pocketwatch.identity.infrastructure.GoogleTokenVerifier;
 import com.pocketwatch.identity.infrastructure.JwtTokenProvider;
-import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

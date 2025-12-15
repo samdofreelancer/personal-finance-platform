@@ -1,3 +1,8 @@
 /frontend/node_modules
 /backend/.idea
 /backend/target
+backend/.factorypath
+/backend/.settings
+backend/.project
+backend/.env
+backend/.classpath
